@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventario - Visualización</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+    <style>
+        /* Estilos básicos para la tabla */
+        body { font-family: sans-serif; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        img.thumbnail { max-width: 100px; max-height: 100px; }
+        #auth-section, #loading, #table-container { margin: 20px 0; }
+        .fragile { background-color: #fff3cd; }
+    </style>
+</head>
+<body>
+    <h1>📦 Visualización de Inventario</h1>
+    <p>Datos obtenidos de Google Sheets en tiempo real.</p>
+
+    <!-- Sección de Autenticación -->
+    <div id="auth-section">
+        <button id="authorize_button" style="display:none;">🔑 Iniciar Sesión con Google</button>
+        <button id="signout_button" style="display:none;">🚪 Cerrar Sesión</button>
+        <span id="auth-status"></span>
+    </div>
+
+    <!-- Indicador de Carga -->
+    <div id="loading" style="display:none;">⏳ Cargando datos desde Google Sheets...</div>
+
+    <!-- Contenedor para la Tabla -->
+    <div id="table-container"></div>
+
+    <script>
+        // ============================================
+        // 🔐 CONFIGURACIÓN - REEMPLAZA ESTOS VALORES
+        // ============================================
+        const API_KEY = '<TU_API_KEY_RESTRINGIDA>';
+        const CLIENT_ID = '<TU_CLIENT_ID>';
+        const SPREADSHEET_ID = '<TU_SPREADSHEET_ID>';
+
+        // Configuración de la Hoja y Datos
+        const HOJA_NOMBRE = 'data'; // Nombre de la pestaña en tu Sheets
+        const RANGO = `${HOJA_NOMBRE}!A2:M`; // Lee desde la fila 2, columnas A a M (13 columnas)
+
+        // Configuración de Imágenes
+        const URL_BASE_IMAGENES = 'scanpet/PHOTOS_salida_20260123_1452/'; // Ruta relativa a tus fotos
+
+        // Alcance de la API (solo lectura)
+        const SCOPES = 'https://www.googleapis.com/auth/spreadsheets.readonly';
+
+        // ============================================
+        // 🚀 INICIALIZACIÓN DE LA API DE GOOGLE
+        // ============================================
+        let tokenClient;
+        let gapiInited = false;
+        let gisInited = false;
+
+        function gapiLoaded() {
+            gapi.load('client', initializeGapiClient);
+        }
+        async function initializeGapiClient() {
+            await gapi.client.init({ apiKey: API_KEY });
+            gapiInited = true;
+            maybeEnableAuthButton();
+        }
+        function gisLoaded() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: SCOPES,
+                callback: '', // Se define después
+            });
+            gisInited = true;
+            maybeEnableAuthButton();
+        }
+        function maybeEnableAuthButton() {
+            if (gapiInited && gisInited) {
+                document.getElementById('authorize_button').style.display = 'inline-block';
+            }
+        }
+
+        // ============================================
+        // 🔑 MANEJO DE AUTENTICACIÓN (OAuth 2.0)
+        // ============================================
+        document.getElementById('authorize_button').onclick = () => {
+            tokenClient.callback = async (resp) => {
+                if (resp.error !== undefined) {
+                    document.getElementById('auth-status').innerHTML = '❌ Error de autenticación.';
+                    throw resp;
+                }
+                // Éxito: ocultar botón de login, mostrar logout y cargar datos
+                document.getElementById('authorize_button').style.display = 'none';
+                document.getElementById('signout_button').style.display = 'inline-block';
+                document.getElementById('auth-status').innerHTML = '✅ Autenticado.';
+                await cargarYMostrarDatos();
+            };
+            tokenClient.requestAccessToken({ prompt: 'consent' });
+        };
+
+        document.getElementById('signout_button').onclick = () => {
+            const token = gapi.client.getToken();
+            if (token !== null) {
+                google.accounts.oauth2.revoke(token.access_token);
+                gapi.client.setToken(null);
+                document.getElementById('table-container').innerHTML = '';
+                document.getElementById('signout_button').style.display = 'none';
+                document.getElementById('authorize_button').style.display = 'inline-block';
+                document.getElementById('auth-status').innerHTML = '🔒 Sesión cerrada.';
+                document.getElementById('loading').style.display = 'none';
+            }
+        };
+
+        // ============================================
+        // 📊 FUNCIÓN PRINCIPAL: Obtener y mostrar datos
+        // ============================================
+        async function cargarYMostrarDatos() {
+            const contenedor = document.getElementById('table-container');
+            const loading = document.getElementById('loading');
+
+            // Mostrar indicador de carga
+            loading.style.display = 'block';
+            contenedor.innerHTML = '';
+
+            try {
+                // 1. Solicitar datos a la API
+                const response = await gapi.client.sheets.spreadsheets.values.get({
+                    spreadsheetId: SPREADSHEET_ID,
+                    range: RANGO,
+                });
+
+                const filas = response.result.values;
+                if (!filas || filas.length === 0) {
+                    contenedor.innerHTML = '<p>No se encontraron datos en la hoja.</p>';
+                    return;
+                }
+
+                // 2. Definir los índices de las columnas (A=0, B=1, ...)
+                const COLUMNAS = {
+                    CODIGO: 0,      // A
+                    ARTICULO: 1,    // B
+                    UNIDADES: 2,    // C
+                    COMENTARIO: 3,  // D
+                    UBICACION: 4,   // E
+                    PRECIO: 5,      // F
+                    FRAGIL: 6,      // G
+                    FOTO: 7,        // H
+                    FECHA: 8,       // I
+                    HORA: 9,        // J
+                    LATITUD: 10,    // K
+                    LONGITUD: 11,   // L
+                    VENTA: 12       // M
+                };
+
+                // 3. Filtrar filas si es necesario (Ejemplo: solo los marcados para venta)
+                //    Comenta/descomenta la línea siguiente según necesites.
+                // const filasFiltradas = filas.filter(fila => fila[COLUMNAS.VENTA] === 'SI');
+                const filasFiltradas = filas; // Mostrar todas las filas
+
+                // 4. Generar la tabla HTML
+                let html = `
+                    <h3>Total de items: ${filasFiltradas.length}</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Artículo</th>
+                                <th>Unid.</th>
+                                <th>Ubicación</th>
+                                <th>Precio</th>
+                                <th>Frágil</th>
+                                <th>Foto</th>
+                                <th>Fecha</th>
+                                <th>Comentario</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                filasFiltradas.forEach(fila => {
+                    // Construir la URL completa de la imagen
+                    const nombreFoto = fila[COLUMNAS.FOTO];
+                    const urlFoto = nombreFoto ? `${URL_BASE_IMAGENES}${nombreFoto}` : '';
+
+                    // Determinar clase CSS si es frágil
+                    const esFragil = fila[COLUMNAS.FRAGIL]?.toUpperCase() === 'SI' ? 'fragile' : '';
+
+                    html += `
+                        <tr class="${esFragil}">
+                            <td>${fila[COLUMNAS.CODIGO] || ''}</td>
+                            <td><strong>${fila[COLUMNAS.ARTICULO] || ''}</strong></td>
+                            <td>${fila[COLUMNAS.UNIDADES] || ''}</td>
+                            <td>${fila[COLUMNAS.UBICACION] || ''}</td>
+                            <td>${formatearPrecio(fila[COLUMNAS.PRECIO])}</td>
+                            <td>${fila[COLUMNAS.FRAGIL] || ''}</td>
+                            <td>${urlFoto ? `<img src="${urlFoto}" alt="Foto" class="thumbnail" onerror="this.style.display='none'">` : ''}</td>
+                            <td>${formatearFecha(fila[COLUMNAS.FECHA])}</td>
+                            <td>${fila[COLUMNAS.COMENTARIO] || ''}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `</tbody></table>`;
+                contenedor.innerHTML = html;
+
+            } catch (error) {
+                console.error('Error al cargar los datos:', error);
+                contenedor.innerHTML = `<p style="color: red;">❌ Error al cargar los datos. Revisa la consola para más detalles.</p>`;
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        // ============================================
+        // 🛠️ FUNCIONES AUXILIARES
+        // ============================================
+        function formatearPrecio(valor) {
+            if (!valor) return '';
+            const numero = parseFloat(valor);
+            return isNaN(numero) ? valor : `$${numero.toLocaleString('es')}`;
+        }
+
+        function formatearFecha(valor) {
+            if (!valor) return '';
+            // Intenta formatear fechas de Google Sheets (serial numbers o strings)
+            const fecha = new Date(valor);
+            return isNaN(fecha.getTime()) ? valor : fecha.toLocaleDateString('es-ES');
+        }
+
+        // ============================================
+        // 🏁 INICIALIZAR AL CARGAR LA PÁGINA
+        // ============================================
+        window.gapiLoaded = gapiLoaded;
+        window.gisLoaded = gisLoaded;
+    </script>
+</body>
+</html>
