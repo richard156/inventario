@@ -3,308 +3,183 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventario - Visualización</title>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="https://apis.google.com/js/api.js" async defer></script>
+    <title>Inventario - Visualización Simple</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        body { font-family: Arial, sans-serif; margin: 20px; }
         table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
         th { background-color: #4CAF50; color: white; }
-        img.thumbnail { max-width: 80px; max-height: 80px; border-radius: 5px; }
-        #auth-section { padding: 15px; background: #e8f5e9; border-radius: 5px; margin: 20px 0; }
-        button { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        #authorize_button { background: #4285f4; color: white; }
-        #signout_button { background: #db4437; color: white; }
-        .fragile { background-color: #fff3cd; }
+        img.thumbnail { max-width: 80px; max-height: 80px; }
         .loading { color: #666; font-style: italic; }
-        .error { color: #d32f2f; background: #ffebee; padding: 15px; border-radius: 5px; margin: 15px 0; }
-        .success { color: #388e3c; background: #e8f5e9; padding: 15px; border-radius: 5px; }
+        .error { color: red; background: #ffe6e6; padding: 15px; border-radius: 5px; }
+        .success { color: green; background: #e8f5e9; padding: 15px; border-radius: 5px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>📦 Visualización de Inventario</h1>
-        <p>Datos obtenidos de Google Sheets en tiempo real.</p>
-
-        <div id="auth-section">
-            <button id="authorize_button" style="display:none;">🔑 Iniciar Sesión con Google</button>
-            <button id="signout_button" style="display:none;">🚪 Cerrar Sesión</button>
-            <span id="auth-status" class="loading">Esperando autenticación...</span>
-        </div>
-
-        <div id="debug-info" class="error" style="display:none;"></div>
-
-        <div id="loading" style="display:none;">
-            <div class="loading">⏳ Cargando datos desde Google Sheets...</div>
-            <div style="margin-top:10px; color:#666;">
-                <small>Esto puede tomar unos segundos. Verifica la consola (F12) si tarda mucho.</small>
-            </div>
-        </div>
-
-        <div id="table-container"></div>
-    </div>
+    <h1>📦 Visualización de Inventario</h1>
+    <p>Datos obtenidos de Google Sheets.</p>
+    
+    <div id="status" class="loading">⏳ Preparando para cargar datos...</div>
+    <div id="data-container"></div>
 
     <script>
-        // ============================================
-        // 🔐 CONFIGURACIÓN - REEMPLAZA CON TUS DATOS
-        // ============================================
-        // ❗ OBTÉN UNA NUEVA API_KEY EN: https://console.cloud.google.com
-        const API_KEY = 'AIzaSyDwR2gcdFzYC3Lbt_o6kUtjQ9lN8dutnog'; // 40 caracteres, ej: AIzaSyB8i2oPNqfxO-8kEyOMGo3LY9sekPKT4fg
-        const CLIENT_ID = '386513901927-vcogv19hqgiqukdt885fik8spppri27v.apps.googleusercontent.com';
+        // 🔧 CONFIGURACIÓN - DEBES COMPLETAR ESTO
+        const API_KEY = ''; // DEJAR VACÍO POR AHORA - leer instrucciones abajo
         const SPREADSHEET_ID = '14Biamc2q1cvNegVz4pj0yfspWOoA1rf4';
-
-        const HOJA_NOMBRE = 'Data';
-        const RANGO = `${HOJA_NOMBRE}!A2:M`;
-
-        // URL para imágenes en GitHub Pages
-        const URL_BASE_IMAGENES = 'https://richard156.github.io/inventario/scanpet/PHOTOS_salida_20260123_1452/';
-
-        const SCOPES = 'https://www.googleapis.com/auth/spreadsheets.readonly';
-
-        // ============================================
-        // 🚀 INICIALIZACIÓN
-        // ============================================
-        let tokenClient;
-        let gapiInited = false;
-        let gisInited = false;
-
-        function showDebug(message, isError = true) {
-            const debugDiv = document.getElementById('debug-info');
-            debugDiv.innerHTML = isError ? `❌ ${message}` : `ℹ️ ${message}`;
-            debugDiv.className = isError ? 'error' : 'success';
-            debugDiv.style.display = 'block';
-            console.log(isError ? 'Error:' : 'Info:', message);
-        }
-
-        function hideDebug() {
-            document.getElementById('debug-info').style.display = 'none';
-        }
-
-        function updateAuthStatus(message, isSuccess = false) {
-            const statusEl = document.getElementById('auth-status');
-            statusEl.textContent = message;
-            statusEl.className = isSuccess ? 'success' : 'loading';
-        }
-
-        async function gapiLoaded() {
-            try {
-                await gapi.load('client', initializeGapiClient);
-                console.log('✅ gapi.load completado');
-            } catch (error) {
-                showDebug(`Error cargando gapi: ${error.message}`);
-            }
-        }
-
-        async function initializeGapiClient() {
-            try {
-                await gapi.client.init({
-                    apiKey: API_KEY,
-                    discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4']
-                });
-                gapiInited = true;
-                console.log('✅ Google API inicializada');
-                maybeEnableAuthButton();
-            } catch (error) {
-                showDebug(`Error inicializando API: ${error.message}`);
-                if (error.message.includes('API key')) {
-                    showDebug('Tu API_KEY es inválida. Ve a https://console.cloud.google.com y crea una nueva clave de 40 caracteres.');
-                }
-            }
-        }
-
-        function gisLoaded() {
-            try {
-                tokenClient = google.accounts.oauth2.initTokenClient({
-                    client_id: CLIENT_ID,
-                    scope: SCOPES,
-                    callback: '',
-                });
-                gisInited = true;
-                console.log('✅ Google Identity Services inicializado');
-                maybeEnableAuthButton();
-            } catch (error) {
-                showDebug(`Error GIS: ${error.message}`);
-            }
-        }
-
-        function maybeEnableAuthButton() {
-            if (gapiInited && gisInited) {
-                document.getElementById('authorize_button').style.display = 'inline-block';
-                updateAuthStatus('Listo para autenticar. Haz clic en "Iniciar Sesión".');
-                console.log('✅ Botón de autorización habilitado');
-            }
-        }
-
-        // ============================================
-        // 🔑 AUTENTICACIÓN
-        // ============================================
-        document.getElementById('authorize_button').onclick = () => {
-            console.log('Iniciando autenticación OAuth...');
-            updateAuthStatus('Redirigiendo a Google para autenticación...');
+        const RANGE = 'Data!A2:M'; // Ajusta si el nombre de la hoja es diferente
+        
+        // URL base para imágenes (ajusta según tu estructura en GitHub)
+        const IMAGE_BASE_URL = 'scanpet/PHOTOS_salida_20260123_1452/';
+        
+        async function loadData() {
+            const statusEl = document.getElementById('status');
+            const containerEl = document.getElementById('data-container');
             
-            tokenClient.callback = async (resp) => {
-                if (resp.error !== undefined) {
-                    console.error('Error OAuth:', resp);
-                    updateAuthStatus('Error de autenticación');
-                    showDebug(`Error OAuth: ${resp.error}. Verifica tu CLIENT_ID y configuración en Google Cloud.`);
+            try {
+                // Verificar si hay API_KEY
+                if (!API_KEY || API_KEY.length < 10) {
+                    throw new Error('API_KEY no configurada. Sigue los pasos abajo.');
+                }
+                
+                statusEl.textContent = '⏳ Cargando datos de Google Sheets...';
+                statusEl.className = 'loading';
+                
+                // Construir URL de la API de Google Sheets
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+                
+                console.log('URL solicitada:', url);
+                
+                // Hacer la petición
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Error ${response.status}: ${errorData.error?.message || 'Error desconocido'}`);
+                }
+                
+                const data = await response.json();
+                const rows = data.values || [];
+                
+                if (rows.length === 0) {
+                    containerEl.innerHTML = '<p class="loading">No se encontraron datos en la hoja.</p>';
+                    statusEl.textContent = '✅ Hoja encontrada, pero sin datos.';
+                    statusEl.className = 'success';
                     return;
                 }
                 
-                document.getElementById('authorize_button').style.display = 'none';
-                document.getElementById('signout_button').style.display = 'inline-block';
-                updateAuthStatus('✅ Autenticado correctamente', true);
-                hideDebug();
-                await cargarYMostrarDatos();
-            };
-            
-            tokenClient.requestAccessToken({ prompt: 'consent' });
-        };
-
-        document.getElementById('signout_button').onclick = () => {
-            const token = gapi.client.getToken();
-            if (token !== null) {
-                google.accounts.oauth2.revoke(token.access_token);
-                gapi.client.setToken(null);
-                document.getElementById('table-container').innerHTML = '';
-                document.getElementById('signout_button').style.display = 'none';
-                document.getElementById('authorize_button').style.display = 'inline-block';
-                updateAuthStatus('Sesión cerrada. Vuelve a iniciar sesión.');
-                document.getElementById('loading').style.display = 'none';
-            }
-        };
-
-        // ============================================
-        // 📊 CARGAR DATOS
-        // ============================================
-        async function cargarYMostrarDatos() {
-            const contenedor = document.getElementById('table-container');
-            const loading = document.getElementById('loading');
-
-            loading.style.display = 'block';
-            contenedor.innerHTML = '';
-            hideDebug();
-
-            try {
-                console.log('Solicitando datos...');
-                updateAuthStatus('Obteniendo datos de Google Sheets...', true);
-
-                const response = await gapi.client.sheets.spreadsheets.values.get({
-                    spreadsheetId: SPREADSHEET_ID,
-                    range: RANGO,
-                });
-
-                console.log('Respuesta recibida:', response);
-
-                const filas = response.result.values;
-                if (!filas || filas.length === 0) {
-                    contenedor.innerHTML = '<p class="loading">No se encontraron datos en la hoja.</p>';
-                    return;
-                }
-
-                // Mostrar datos
-                const COLUMNAS = {
-                    CODIGO: 0, ARTICULO: 1, UNIDADES: 2, COMENTARIO: 3,
-                    UBICACION: 4, PRECIO: 5, FRAGIL: 6, FOTO: 7,
-                    FECHA: 8, HORA: 9, LATITUD: 10, LONGITUD: 11, VENTA: 12
-                };
-
+                // Mostrar los datos en una tabla
                 let html = `
                     <div class="success">
-                        ✅ <strong>${filas.length} items cargados</strong> - ${new Date().toLocaleTimeString()}
+                        ✅ <strong>${rows.length} items cargados</strong> - ${new Date().toLocaleTimeString()}
                     </div>
                     <table>
                         <thead>
                             <tr>
-                                <th>Código</th><th>Artículo</th><th>Unid.</th>
-                                <th>Ubicación</th><th>Precio</th><th>Frágil</th>
-                                <th>Foto</th><th>Fecha</th><th>Comentario</th>
+                                <th>Código</th>
+                                <th>Artículo</th>
+                                <th>Unidades</th>
+                                <th>Ubicación</th>
+                                <th>Precio</th>
+                                <th>Frágil</th>
+                                <th>Foto</th>
                             </tr>
                         </thead>
                         <tbody>
                 `;
-
-                filas.forEach((fila, index) => {
-                    const nombreFoto = fila[COLUMNAS.FOTO];
-                    const urlFoto = nombreFoto ? `${URL_BASE_IMAGENES}${nombreFoto.trim()}` : '';
-                    const esFragil = fila[COLUMNAS.FRAGIL]?.toUpperCase() === 'SI' ? 'fragile' : '';
-
+                
+                rows.forEach(row => {
+                    const imageName = row[7]; // Columna H (índice 7) es Foto
+                    const imageUrl = imageName ? `${IMAGE_BASE_URL}${imageName}` : '';
+                    const isFragile = row[6]?.toUpperCase() === 'SI' ? 'style="background-color:#fff3cd"' : '';
+                    
                     html += `
-                        <tr class="${esFragil}">
-                            <td><code>${fila[COLUMNAS.CODIGO] || ''}</code></td>
-                            <td><strong>${fila[COLUMNAS.ARTICULO] || ''}</strong></td>
-                            <td>${fila[COLUMNAS.UNIDADES] || '1'}</td>
-                            <td>${fila[COLUMNAS.UBICACION] || ''}</td>
-                            <td>${formatearPrecio(fila[COLUMNAS.PRECIO])}</td>
-                            <td>${fila[COLUMNAS.FRAGIL] || 'No'}</td>
-                            <td>${urlFoto ? 
-                                `<img src="${urlFoto}" alt="Foto" class="thumbnail" 
-                                     onerror="this.style.display='none'; console.log('Error cargando: ${nombreFoto}')">` 
-                                : '—'}</td>
-                            <td>${formatearFecha(fila[COLUMNAS.FECHA])}</td>
-                            <td>${fila[COLUMNAS.COMENTARIO] || ''}</td>
+                        <tr ${isFragile}>
+                            <td>${row[0] || ''}</td>
+                            <td><strong>${row[1] || ''}</strong></td>
+                            <td>${row[2] || '1'}</td>
+                            <td>${row[4] || ''}</td>
+                            <td>${formatPrice(row[5])}</td>
+                            <td>${row[6] || 'No'}</td>
+                            <td>${imageUrl ? `<img src="${imageUrl}" class="thumbnail" alt="Foto" onerror="this.style.display='none'">` : '—'}</td>
                         </tr>
                     `;
                 });
-
+                
                 html += '</tbody></table>';
-                contenedor.innerHTML = html;
-                updateAuthStatus(`✅ ${filas.length} items cargados correctamente`, true);
-
+                containerEl.innerHTML = html;
+                
+                statusEl.textContent = `✅ ${rows.length} items cargados correctamente`;
+                statusEl.className = 'success';
+                
             } catch (error) {
                 console.error('Error completo:', error);
+                statusEl.className = 'error';
                 
-                let mensaje = `Error: ${error.message}`;
-                if (error.status === 403) {
-                    mensaje = 'Acceso denegado (403). Verifica:<br>' +
-                              '1. La hoja está compartida como "Cualquier persona con el enlace"<br>' +
-                              '2. Tu API_KEY tiene acceso a Google Sheets API<br>' +
-                              '3. Tu CLIENT_ID está configurado correctamente';
-                } else if (error.status === 404) {
-                    mensaje = 'Hoja no encontrada (404). Verifica:<br>' +
-                              '1. SPREADSHEET_ID es correcto<br>' +
-                              '2. La hoja "Data" existe en el documento';
-                } else if (error.message.includes('API key')) {
-                    mensaje = 'API_KEY inválida. Ve a Google Cloud Console y crea una nueva clave.';
+                if (error.message.includes('API_KEY')) {
+                    statusEl.innerHTML = `
+                        ❌ <strong>API_KEY no configurada</strong><br><br>
+                        <strong>Sigue estos pasos:</strong><br>
+                        1. Ve a <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a><br>
+                        2. Crea un proyecto nuevo o selecciona uno existente<br>
+                        3. Ve a "APIs & Services" > "Credentials"<br>
+                        4. Haz clic en "Create Credentials" > "API Key"<br>
+                        5. <strong>Copia la clave completa</strong> (40 caracteres)<br>
+                        6. Vuelve a este código y pégala en: const API_KEY = 'TU_CLAVE_AQUI';<br><br>
+                        <small>Luego, actualiza esta página.</small>
+                    `;
+                } else if (error.message.includes('Error 403')) {
+                    statusEl.innerHTML = `
+                        ❌ <strong>Acceso denegado (403)</strong><br><br>
+                        Posibles causas:<br>
+                        1. La hoja de cálculo NO está compartida como "Cualquier persona con el enlace"<br>
+                        2. La API_KEY no está restringida correctamente<br>
+                        3. La API_KEY no tiene habilitada Google Sheets API<br><br>
+                        <strong>Solución:</strong><br>
+                        1. Abre tu Google Sheet > Haz clic en "Compartir" > Cambia a "Cualquier persona con el enlace"<br>
+                        2. En Google Cloud Console, para tu API_KEY:<br>
+                           - Restricciones de API: "Google Sheets API"<br>
+                           - Restricciones HTTP: https://richard156.github.io
+                    `;
+                } else if (error.message.includes('Error 404')) {
+                    statusEl.innerHTML = `
+                        ❌ <strong>Hoja no encontrada (404)</strong><br><br>
+                        Verifica que:<br>
+                        1. El SPREADSHEET_ID es correcto<br>
+                        2. La hoja se llama exactamente "Data" (ver mayúsculas)<br>
+                        3. El rango es correcto: Data!A2:M
+                    `;
+                } else {
+                    statusEl.textContent = `❌ Error: ${error.message}`;
                 }
                 
-                showDebug(mensaje);
-                updateAuthStatus('Error cargando datos');
-            } finally {
-                loading.style.display = 'none';
+                containerEl.innerHTML = '';
             }
         }
-
-        function formatearPrecio(valor) {
-            if (!valor) return '—';
-            const numero = parseFloat(valor);
-            return isNaN(numero) ? valor : `$${numero.toLocaleString('es-ES')}`;
+        
+        function formatPrice(value) {
+            if (!value) return '—';
+            const num = parseFloat(value);
+            return isNaN(num) ? value : `$${num.toLocaleString('es-ES')}`;
         }
-
-        function formatearFecha(valor) {
-            if (!valor) return '—';
-            const fecha = new Date(valor);
-            return isNaN(fecha.getTime()) ? valor : fecha.toLocaleDateString('es-ES');
-        }
-
-        // ============================================
-        // 🏁 INICIALIZAR
-        // ============================================
-        window.gapiLoaded = gapiLoaded;
-        window.gisLoaded = gisLoaded;
-
-        // Verificar configuración inicial
-        console.log('=== CONFIGURACIÓN ACTUAL ===');
-        console.log('API_KEY:', API_KEY ? 'Configurada (' + API_KEY.length + ' chars)' : 'NO CONFIGURADA');
-        console.log('CLIENT_ID:', CLIENT_ID ? 'Configurado' : 'NO CONFIGURADO');
-        console.log('SPREADSHEET_ID:', SPREADSHEET_ID);
-        console.log('URL imágenes:', URL_BASE_IMAGENES);
-        console.log('======================');
-
-        if (!API_KEY || API_KEY.includes('TU_NUEVA_API_KEY_AQUI')) {
-            showDebug('❌ API_KEY NO CONFIGURADA. Reemplaza "TU_NUEVA_API_KEY_AQUI" con tu clave real de Google Cloud.');
-        }
+        
+        // Cargar datos cuando la página se cargue
+        document.addEventListener('DOMContentLoaded', loadData);
     </script>
+    
+    <div style="margin-top: 30px; padding: 15px; background: #f8f9fa; border-radius: 5px; border-left: 4px solid #4CAF50;">
+        <h3>📋 Pasos para Configurar:</h3>
+        <ol>
+            <li><strong>Obtén una API_KEY nueva</strong> en <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a></li>
+            <li><strong>Configura restricciones</strong> para tu API_KEY:
+                <ul>
+                    <li>Restricciones de API: "Google Sheets API"</li>
+                    <li>Restricciones HTTP: https://richard156.github.io</li>
+                </ul>
+            </li>
+            <li><strong>Comparte tu Google Sheet</strong> como "Cualquier persona con el enlace" (solo lectura)</li>
+            <li><strong>Pega tu API_KEY</strong> en el código arriba donde dice: <code>const API_KEY = '';</code></li>
+            <li><strong>Actualiza esta página</strong></li>
+        </ol>
+    </div>
 </body>
 </html>
