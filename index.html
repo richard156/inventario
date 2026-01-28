@@ -3,199 +3,646 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventario Visualizado</title>
+    <meta name="description" content="Escaparate online de inventario en tiempo real">
+    <title>Escaparate de Inventario</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background-color: #2c3e50; color: white; position: sticky; top: 0; }
-        img.thumbnail { max-width: 100px; max-height: 100px; border-radius: 5px; border: 1px solid #ddd; }
-        .status { padding: 15px; border-radius: 5px; margin: 15px 0; }
-        .loading { background: #e3f2fd; color: #1565c0; }
-        .success { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #4caf50; }
-        .error { background: #ffebee; color: #c62828; border-left: 4px solid #f44336; }
-        button { padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        button:hover { background: #2980b9; }
-        .fragile { background-color: #fff3cd !important; }
-        .search { margin: 15px 0; padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 5px; }
-        .pagination { margin-top: 20px; }
-        .pagination button { margin: 0 5px; padding: 5px 10px; background: #7f8c8d; }
-        .pagination button.active { background: #3498db; }
+        /* ===== RESET Y ESTILOS BASE ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --color-primario: #2c3e50;
+            --color-secundario: #3498db;
+            --color-accento: #e74c3c;
+            --color-fondo: #f8f9fa;
+            --color-texto: #333;
+            --color-borde: #e0e0e0;
+            --color-exito: #27ae60;
+            --sombra: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --radio-borde: 8px;
+            --transicion: all 0.3s ease;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--color-texto);
+            background-color: var(--color-fondo);
+            padding: 0;
+            margin: 0;
+        }
+
+        /* ===== ESTRUCTURA PRINCIPAL ===== */
+        .contenedor {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--color-primario), #1a2530);
+            color: white;
+            padding: 1.2rem 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .cabecera-contenido {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 0.8rem;
+        }
+
+        @media (min-width: 768px) {
+            .cabecera-contenido {
+                flex-direction: row;
+                justify-content: space-between;
+                text-align: left;
+            }
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .logo i {
+            color: var(--color-secundario);
+        }
+
+        .subtitulo {
+            opacity: 0.9;
+            font-weight: 300;
+            font-size: 0.95rem;
+        }
+
+        main {
+            padding: 1.5rem 0 3rem;
+            min-height: calc(100vh - 200px);
+        }
+
+        footer {
+            background-color: var(--color-primario);
+            color: rgba(255, 255, 255, 0.85);
+            text-align: center;
+            padding: 1.5rem 0;
+            margin-top: 2rem;
+            font-size: 0.9rem;
+        }
+
+        /* ===== PANEL DE CONTROL ===== */
+        .panel-control {
+            background: white;
+            border-radius: var(--radio-borde);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--sombra);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .panel-control {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+            }
+        }
+
+        .estado-conexion {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.95rem;
+        }
+
+        .punto-estado {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #ccc;
+        }
+
+        .punto-estado.activo {
+            background-color: var(--color-exito);
+            animation: latido 1.5s infinite;
+        }
+
+        @keyframes latido {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .controles {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            width: 100%;
+        }
+
+        @media (min-width: 576px) {
+            .controles {
+                flex-direction: row;
+                align-items: center;
+            }
+        }
+
+        .busqueda-contenedor {
+            position: relative;
+            flex-grow: 1;
+        }
+
+        .busqueda-contenedor i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #777;
+        }
+
+        #busqueda {
+            width: 100%;
+            padding: 0.7rem 1rem 0.7rem 2.5rem;
+            border: 1px solid var(--color-borde);
+            border-radius: var(--radio-borde);
+            font-size: 0.95rem;
+            transition: var(--transicion);
+        }
+
+        #busqueda:focus {
+            outline: none;
+            border-color: var(--color-secundario);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+
+        .boton {
+            padding: 0.7rem 1.5rem;
+            background-color: var(--color-secundario);
+            color: white;
+            border: none;
+            border-radius: var(--radio-borde);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transicion);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+        }
+
+        .boton:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        /* ===== TARJETAS DE PRODUCTOS ===== */
+        .resumen {
+            background: white;
+            border-radius: var(--radio-borde);
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--sombra);
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .resumen-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        @media (min-width: 576px) {
+            .resumen-item {
+                align-items: flex-start;
+                text-align: left;
+            }
+        }
+
+        .resumen-valor {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--color-primario);
+        }
+
+        .resumen-etiqueta {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .contenedor-productos {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (min-width: 1200px) {
+            .contenedor-productos {
+                grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            }
+        }
+
+        .tarjeta-producto {
+            background: white;
+            border-radius: var(--radio-borde);
+            overflow: hidden;
+            box-shadow: var(--sombra);
+            transition: var(--transicion);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .tarjeta-producto:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
+        }
+
+        .tarjeta-producto.fragil {
+            border-top: 4px solid var(--color-accento);
+        }
+
+        .contenedor-imagen {
+            width: 100%;
+            height: 200px;
+            overflow: hidden;
+            position: relative;
+            background-color: #f5f5f5;
+        }
+
+        .imagen-producto {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .tarjeta-producto:hover .imagen-producto {
+            transform: scale(1.05);
+        }
+
+        .sin-imagen {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        .contenido-tarjeta {
+            padding: 1.2rem;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .encabezado-tarjeta {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.8rem;
+        }
+
+        .codigo-producto {
+            font-family: monospace;
+            background-color: #f1f8ff;
+            color: var(--color-secundario);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .etiqueta-fragil {
+            background-color: #ffeaa7;
+            color: #d35400;
+            font-size: 0.7rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .nombre-producto {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--color-primario);
+            margin-bottom: 0.5rem;
+            line-height: 1.3;
+        }
+
+        .detalles-producto {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .detalle-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .detalle-item i {
+            width: 16px;
+            color: var(--color-secundario);
+        }
+
+        .precio-producto {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--color-exito);
+            margin-top: auto;
+            padding-top: 0.8rem;
+            border-top: 1px dashed var(--color-borde);
+        }
+
+        /* ===== PAGINACIÓN ===== */
+        .paginacion {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .boton-pagina {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radio-borde);
+            background-color: white;
+            border: 1px solid var(--color-borde);
+            cursor: pointer;
+            transition: var(--transicion);
+            font-weight: 600;
+        }
+
+        .boton-pagina:hover {
+            background-color: var(--color-fondo);
+            border-color: var(--color-secundario);
+        }
+
+        .boton-pagina.activa {
+            background-color: var(--color-secundario);
+            color: white;
+            border-color: var(--color-secundario);
+        }
+
+        .boton-pagina.deshabilitada {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* ===== MENSAJES ===== */
+        .mensaje-carga, .mensaje-error, .mensaje-vacio {
+            text-align: center;
+            padding: 3rem 1rem;
+            grid-column: 1 / -1;
+        }
+
+        .mensaje-carga i, .mensaje-error i, .mensaje-vacio i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.7;
+        }
+
+        .mensaje-carga {
+            color: var(--color-secundario);
+        }
+
+        .mensaje-error {
+            color: var(--color-accento);
+        }
+
+        .mensaje-vacio {
+            color: #7f8c8d;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(52, 152, 219, 0.2);
+            border-radius: 50%;
+            border-top-color: var(--color-secundario);
+            animation: giro 1s linear infinite;
+            margin: 0 auto 1.5rem;
+        }
+
+        @keyframes giro {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ===== RESPONSIVE ADICIONAL ===== */
+        @media (max-width: 575px) {
+            .contenedor-productos {
+                grid-template-columns: 1fr;
+            }
+            
+            .panel-control {
+                padding: 1.2rem;
+            }
+            
+            .boton {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>📦 INVENTARIO - Datos en Tiempo Real</h1>
-        <p>Mostrando datos directamente desde Google Sheets</p>
-        
-        <div id="status" class="status loading">
-            ⏳ Inicializando sistema...
-        </div>
-        
-        <div id="controls" style="display:none;">
-            <div style="margin: 15px 0;">
-                <input type="text" id="search" class="search" placeholder="🔍 Buscar por artículo, código o ubicación..." onkeyup="filterTable()">
-                <button onclick="loadData()" style="background:#27ae60;">🔄 Actualizar Datos</button>
+    <!-- CABECERA -->
+    <header>
+        <div class="contenedor">
+            <div class="cabecera-contenido">
+                <div class="logo">
+                    <i class="fas fa-store"></i>
+                    <div>
+                        <h1>Escaparate Online</h1>
+                        <p class="subtitulo">Inventario en tiempo real desde Google Sheets</p>
+                    </div>
+                </div>
+                <div class="estado-conexion">
+                    <div class="punto-estado" id="estado-conexion"></div>
+                    <span id="texto-estado">Conectando...</span>
+                </div>
             </div>
-            <div id="summary"></div>
+        </div>
+    </header>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="contenedor">
+        <!-- PANEL DE CONTROL -->
+        <section class="panel-control">
+            <div class="controles">
+                <div class="busqueda-contenedor">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="busqueda" placeholder="Buscar productos por nombre, código o ubicación...">
+                </div>
+                <button class="boton" id="boton-actualizar">
+                    <i class="fas fa-sync-alt"></i> Actualizar
+                </button>
+            </div>
+        </section>
+
+        <!-- RESUMEN -->
+        <section class="resumen" id="resumen" style="display: none;">
+            <div class="resumen-item">
+                <div class="resumen-valor" id="total-productos">0</div>
+                <div class="resumen-etiqueta">Productos</div>
+            </div>
+            <div class="resumen-item">
+                <div class="resumen-valor" id="total-fragiles">0</div>
+                <div class="resumen-etiqueta">Frágiles</div>
+            </div>
+            <div class="resumen-item">
+                <div class="resumen-valor" id="valor-total">$0</div>
+                <div class="resumen-etiqueta">Valor total</div>
+            </div>
+            <div class="resumen-item">
+                <div class="resumen-valor" id="productos-visibles">0</div>
+                <div class="resumen-etiqueta">Mostrando</div>
+            </div>
+        </section>
+
+        <!-- CONTENEDOR DE PRODUCTOS -->
+        <div id="contenedor-mensajes">
+            <div class="mensaje-carga">
+                <div class="spinner"></div>
+                <h3>Cargando productos...</h3>
+                <p>Conectando con Google Sheets</p>
+            </div>
         </div>
         
-        <div id="table-container"></div>
-        <div id="pagination" class="pagination"></div>
-        
-        <div style="margin-top: 30px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
-            <h3>📋 Información del Sistema</h3>
-            <p><strong>URL de GitHub Pages:</strong> <code>https://richard156.github.io/inventario/</code></p>
-            <p><strong>ID de Hoja:</strong> <code>14Biamc2q1cvNegVz4pj0yfspWOoA1rf4</code></p>
-            <p><strong>Hoja:</strong> <code>Data</code> | <strong>Rango:</strong> <code>A2:M</code></p>
-            <p><strong>Carpeta de imágenes:</strong> <code>scanpet/PHOTOS_salida_20260123_1452/</code></p>
+        <div class="contenedor-productos" id="contenedor-productos" style="display: none;"></div>
+
+        <!-- PAGINACIÓN -->
+        <div class="paginacion" id="paginacion" style="display: none;"></div>
+    </main>
+
+    <!-- PIE DE PÁGINA -->
+    <footer>
+        <div class="contenedor">
+            <p>Escaparate Online &copy; <span id="ano-actual">2024</span> | Datos actualizados en tiempo real desde Google Sheets</p>
+            <p style="margin-top: 0.5rem; font-size: 0.8rem; opacity: 0.7;">
+                <i class="fas fa-mobile-alt"></i> Diseño 100% responsive para móviles y computadoras
+            </p>
         </div>
-    </div>
+    </footer>
 
     <script>
         // ============================================
-        // 🔧 CONFIGURACIÓN - ¡REEMPLAZA ESTO!
+        // 🔧 CONFIGURACIÓN
         // ============================================
         const CONFIG = {
-            // ❗ PASO 1: Obtén una NUEVA API_KEY en:
-            // https://console.cloud.google.com/apis/credentials
             API_KEY: 'AIzaSyDEd_UpN0DwcGiWKgPsM7boiCh8cpSnB8o',
-            
-            // ❗ PASO 2: Configura RESTRICCIONES para esa clave:
-            // 1. Restricciones de API: "Google Sheets API"
-            // 2. Restricciones HTTP: https://richard156.github.io
-            
-            // ID de tu Google Sheet (ya lo tienes)
             SPREADSHEET_ID: '1cN1QEpr4YYTFEtqx1JtF02oeAmJ7e5haA_PbsLZWxDE',
-            
-            // Nombre de la hoja y rango
             HOJA: 'Data',
             RANGO: 'A2:M',
-            
-            // URL base para imágenes en GitHub
             IMAGENES_BASE: 'scanpet/PHOTOS_salida_20260123_1452/',
-            
-            // Paginación
-            ITEMS_POR_PAGINA: 20
+            PRODUCTOS_POR_PAGINA: 12
         };
 
-        // Variables globales
-        let todosLosDatos = [];
+        // ============================================
+        // 📦 VARIABLES GLOBALES
+        // ============================================
+        let todosLosProductos = [];
+        let productosFiltrados = [];
         let paginaActual = 1;
-        let datosFiltrados = [];
+        let intervaloActualizacion = null;
 
         // ============================================
-        // 🚀 FUNCIONES PRINCIPALES
+        // 🚀 INICIALIZACIÓN
         // ============================================
-
-        function actualizarEstado(mensaje, tipo = 'loading') {
-            const statusEl = document.getElementById('status');
-            statusEl.innerHTML = mensaje;
-            statusEl.className = `status ${tipo}`;
-            console.log(`Estado: ${mensaje}`);
-        }
-
-        function mostrarError(mensaje, error = null) {
-            let html = `❌ <strong>${mensaje}</strong>`;
+        document.addEventListener('DOMContentLoaded', function() {
+            // Establecer año actual en el footer
+            document.getElementById('ano-actual').textContent = new Date().getFullYear();
             
-            if (error) {
-                console.error('Error detallado:', error);
-                
-                if (error.message.includes('API key')) {
-                    html += `<br><br><strong>SOLUCIÓN:</strong><br>
-                    1. Ve a <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a><br>
-                    2. Crea una NUEVA "API Key"<br>
-                    3. Configura restricciones:<br>
-                       &nbsp;&nbsp;• API: "Google Sheets API"<br>
-                       &nbsp;&nbsp;• HTTP: https://richard156.github.io<br>
-                    4. Pega la clave completa arriba en CONFIG.API_KEY`;
-                } else if (error.status === 403) {
-                    html += `<br><br><strong>SOLUCIÓN:</strong><br>
-                    1. Abre tu Google Sheet<br>
-                    2. Haz clic en "Compartir" (botón azul arriba)<br>
-                    3. Cambia a "Cualquier persona con el enlace"<br>
-                    4. Permisos: "Lector"`;
-                } else if (error.status === 404) {
-                    html += `<br><br>Verifica que:<br>
-                    1. El ID de la hoja sea correcto<br>
-                    2. La hoja se llame "Data" (exactamente así)<br>
-                    3. Hay datos en el rango A2:M`;
-                }
-            }
+            // Configurar eventos
+            document.getElementById('busqueda').addEventListener('input', filtrarProductos);
+            document.getElementById('boton-actualizar').addEventListener('click', cargarDatos);
             
-            actualizarEstado(html, 'error');
-            document.getElementById('controls').style.display = 'none';
-        }
+            // Cargar datos iniciales
+            cargarDatos();
+            
+            // Configurar actualización automática cada 2 minutos
+            intervaloActualizacion = setInterval(cargarDatos, 120000);
+        });
 
-        async function loadData() {
-            // Validar API_KEY
-            if (!CONFIG.API_KEY || CONFIG.API_KEY.length < 30) {
-                mostrarError('API_KEY no configurada o inválida. Sigue las instrucciones abajo.');
-                return;
-            }
-
-            actualizarEstado('⏳ Conectando con Google Sheets...', 'loading');
-            document.getElementById('controls').style.display = 'none';
-            document.getElementById('table-container').innerHTML = '';
-
+        // ============================================
+        // 🔌 FUNCIONES PRINCIPALES
+        // ============================================
+        async function cargarDatos() {
+            actualizarEstado('Conectando con Google Sheets...', 'cargando');
+            mostrarMensajeCarga();
+            
             try {
-                // Construir URL de la API
                 const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${CONFIG.HOJA}!${CONFIG.RANGO}?key=${CONFIG.API_KEY}`;
+                const respuesta = await fetch(url);
                 
-                console.log('Solicitando datos desde:', url);
-
-                // Hacer la petición
-                const response = await fetch(url);
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw {
-                        message: errorData.error?.message || `Error ${response.status}`,
-                        status: response.status
-                    };
+                if (!respuesta.ok) {
+                    const errorData = await respuesta.json();
+                    throw new Error(`Error ${respuesta.status}: ${errorData.error?.message || 'Error desconocido'}`);
                 }
-
-                const data = await response.json();
                 
-                if (!data.values || data.values.length === 0) {
-                    actualizarEstado('✅ Conexión exitosa, pero no hay datos en la hoja.', 'success');
+                const datos = await respuesta.json();
+                
+                if (!datos.values || datos.values.length === 0) {
+                    mostrarMensajeVacio();
+                    actualizarEstado('Conectado - Sin datos', 'conectado');
                     return;
                 }
-
-                // Procesar datos
-                todosLosDatos = procesarDatos(data.values);
-                datosFiltrados = [...todosLosDatos];
                 
-                // Mostrar controles
-                document.getElementById('controls').style.display = 'block';
+                // Procesar productos
+                todosLosProductos = procesarProductos(datos.values);
+                productosFiltrados = [...todosLosProductos];
                 
-                // Actualizar resumen
+                // Actualizar interfaz
                 actualizarResumen();
+                renderizarProductos();
+                actualizarEstado('Conectado - Datos actualizados', 'conectado');
                 
-                // Mostrar datos
-                renderTable();
-                
-                actualizarEstado(`✅ ${todosLosDatos.length} items cargados correctamente`, 'success');
-
             } catch (error) {
-                mostrarError(`Error al cargar datos: ${error.message}`, error);
+                console.error('Error al cargar datos:', error);
+                mostrarMensajeError(error.message);
+                actualizarEstado('Error de conexión', 'error');
             }
         }
 
-        function procesarDatos(filas) {
-            return filas.map((fila, index) => {
-                // Mapear columnas según tu estructura
+        function procesarProductos(filas) {
+            return filas.map((fila, indice) => {
                 return {
-                    id: index + 1,
-                    codigo: fila[0] || '',
-                    articulo: fila[1] || '',
-                    unidades: fila[2] || '1',
+                    id: indice + 1,
+                    codigo: fila[0] || 'Sin código',
+                    nombre: fila[1] || 'Producto sin nombre',
+                    unidades: parseInt(fila[2]) || 1,
                     comentario: fila[3] || '',
-                    ubicacion: fila[4] || '',
-                    precio: fila[5] || '0',
+                    ubicacion: fila[4] || 'Sin ubicación',
+                    precio: parseFloat((fila[5] || '0').replace(',', '.')) || 0,
                     fragil: (fila[6] || '').toUpperCase() === 'SI',
-                    foto: fila[7] || '',
+                    imagen: fila[7] || '',
                     fecha: fila[8] || '',
                     hora: fila[9] || '',
                     latitud: fila[10] || '',
@@ -205,192 +652,244 @@
             });
         }
 
-        function actualizarResumen() {
-            const summary = document.getElementById('summary');
-            const fragiles = todosLosDatos.filter(item => item.fragil).length;
-            const totalValor = todosLosDatos.reduce((sum, item) => {
-                const precio = parseFloat(item.precio.replace(',', '.')) || 0;
-                const unidades = parseInt(item.unidades) || 1;
-                return sum + (precio * unidades);
-            }, 0);
+        function filtrarProductos() {
+            const termino = document.getElementById('busqueda').value.toLowerCase();
             
-            summary.innerHTML = `
-                <div class="success">
-                    📊 <strong>Resumen del Inventario</strong><br>
-                    • Total items: ${todosLosDatos.length}<br>
-                    • Items frágiles: ${fragiles}<br>
-                    • Valor total estimado: $${totalValor.toLocaleString('es-ES', {minimumFractionDigits: 2})}<br>
-                    • Última actualización: ${new Date().toLocaleTimeString()}
-                </div>
-            `;
-        }
-
-        function renderTable() {
-            const container = document.getElementById('table-container');
-            const inicio = (paginaActual - 1) * CONFIG.ITEMS_POR_PAGINA;
-            const fin = inicio + CONFIG.ITEMS_POR_PAGINA;
-            const datosPagina = datosFiltrados.slice(inicio, fin);
-
-            if (datosPagina.length === 0) {
-                container.innerHTML = '<div class="error">No hay datos que coincidan con la búsqueda.</div>';
-                document.getElementById('pagination').innerHTML = '';
-                return;
-            }
-
-            // Construir tabla
-            let html = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Código</th>
-                            <th>Artículo</th>
-                            <th>Unid.</th>
-                            <th>Ubicación</th>
-                            <th>Precio</th>
-                            <th>Frágil</th>
-                            <th>Foto</th>
-                            <th>Fecha</th>
-                            <th>Comentario</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-
-            datosPagina.forEach(item => {
-                const urlFoto = item.foto ? `${CONFIG.IMAGENES_BASE}${item.foto}` : '';
-                const claseFragil = item.fragil ? 'fragile' : '';
-                
-                html += `
-                    <tr class="${claseFragil}">
-                        <td>${item.id}</td>
-                        <td><code>${item.codigo}</code></td>
-                        <td><strong>${item.articulo}</strong></td>
-                        <td>${item.unidades}</td>
-                        <td>${item.ubicacion}</td>
-                        <td>${formatearPrecio(item.precio)}</td>
-                        <td>${item.fragil ? '✅ Sí' : '❌ No'}</td>
-                        <td>
-                            ${urlFoto ? `
-                                <img src="${urlFoto}" 
-                                     alt="${item.articulo}" 
-                                     class="thumbnail"
-                                     onerror="this.onerror=null; this.src='https://via.placeholder.com/100x100/cccccc/969696?text=Imagen+no+disponible';"
-                                     loading="lazy">
-                            ` : '—'}
-                        </td>
-                        <td>${item.fecha}</td>
-                        <td>${item.comentario || '—'}</td>
-                    </tr>
-                `;
-            });
-
-            html += '</tbody></table>';
-            container.innerHTML = html;
-
-            // Actualizar paginación
-            actualizarPaginacion();
-        }
-
-        function filterTable() {
-            const searchTerm = document.getElementById('search').value.toLowerCase();
-            
-            if (!searchTerm) {
-                datosFiltrados = [...todosLosDatos];
+            if (!termino) {
+                productosFiltrados = [...todosLosProductos];
             } else {
-                datosFiltrados = todosLosDatos.filter(item => 
-                    item.codigo.toLowerCase().includes(searchTerm) ||
-                    item.articulo.toLowerCase().includes(searchTerm) ||
-                    item.ubicacion.toLowerCase().includes(searchTerm) ||
-                    item.comentario.toLowerCase().includes(searchTerm)
+                productosFiltrados = todosLosProductos.filter(producto => 
+                    producto.nombre.toLowerCase().includes(termino) ||
+                    producto.codigo.toLowerCase().includes(termino) ||
+                    producto.ubicacion.toLowerCase().includes(termino) ||
+                    producto.comentario.toLowerCase().includes(termino)
                 );
             }
             
             paginaActual = 1;
-            renderTable();
             actualizarResumen();
+            renderizarProductos();
         }
 
-        function actualizarPaginacion() {
-            const totalPaginas = Math.ceil(datosFiltrados.length / CONFIG.ITEMS_POR_PAGINA);
-            const paginationEl = document.getElementById('pagination');
+        // ============================================
+        // 🎨 FUNCIONES DE INTERFAZ
+        // ============================================
+        function mostrarMensajeCarga() {
+            const contenedor = document.getElementById('contenedor-mensajes');
+            contenedor.innerHTML = `
+                <div class="mensaje-carga">
+                    <div class="spinner"></div>
+                    <h3>Cargando productos...</h3>
+                    <p>Conectando con Google Sheets</p>
+                </div>
+            `;
+            contenedor.style.display = 'block';
+            document.getElementById('contenedor-productos').style.display = 'none';
+            document.getElementById('paginacion').style.display = 'none';
+            document.getElementById('resumen').style.display = 'none';
+        }
+
+        function mostrarMensajeError(mensaje) {
+            const contenedor = document.getElementById('contenedor-mensajes');
+            contenedor.innerHTML = `
+                <div class="mensaje-error">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Error al cargar los datos</h3>
+                    <p>${mensaje}</p>
+                    <button class="boton" onclick="cargarDatos()" style="margin-top: 1rem;">
+                        <i class="fas fa-redo"></i> Reintentar
+                    </button>
+                </div>
+            `;
+            contenedor.style.display = 'block';
+        }
+
+        function mostrarMensajeVacio() {
+            const contenedor = document.getElementById('contenedor-mensajes');
+            contenedor.innerHTML = `
+                <div class="mensaje-vacio">
+                    <i class="fas fa-box-open"></i>
+                    <h3>No hay productos disponibles</h3>
+                    <p>No se encontraron datos en la hoja de cálculo.</p>
+                </div>
+            `;
+            contenedor.style.display = 'block';
+        }
+
+        function actualizarEstado(mensaje, tipo) {
+            const punto = document.getElementById('estado-conexion');
+            const texto = document.getElementById('texto-estado');
+            
+            texto.textContent = mensaje;
+            punto.className = 'punto-estado';
+            
+            switch(tipo) {
+                case 'cargando':
+                    punto.classList.add('cargando');
+                    break;
+                case 'conectado':
+                    punto.classList.add('activo');
+                    break;
+                case 'error':
+                    punto.style.backgroundColor = 'var(--color-accento)';
+                    break;
+            }
+        }
+
+        function actualizarResumen() {
+            const total = todosLosProductos.length;
+            const fragiles = todosLosProductos.filter(p => p.fragil).length;
+            const valorTotal = todosLosProductos.reduce((sum, p) => sum + (p.precio * p.unidades), 0);
+            const visibles = productosFiltrados.length;
+            
+            document.getElementById('total-productos').textContent = total;
+            document.getElementById('total-fragiles').textContent = fragiles;
+            document.getElementById('valor-total').textContent = `$${valorTotal.toLocaleString('es-ES', {minimumFractionDigits: 2})}`;
+            document.getElementById('productos-visibles').textContent = visibles;
+            
+            document.getElementById('resumen').style.display = 'flex';
+        }
+
+        function renderizarProductos() {
+            const contenedorMensajes = document.getElementById('contenedor-mensajes');
+            const contenedorProductos = document.getElementById('contenedor-productos');
+            const paginacion = document.getElementById('paginacion');
+            
+            if (productosFiltrados.length === 0) {
+                contenedorMensajes.innerHTML = `
+                    <div class="mensaje-vacio">
+                        <i class="fas fa-search"></i>
+                        <h3>No se encontraron productos</h3>
+                        <p>No hay resultados para tu búsqueda. Intenta con otros términos.</p>
+                    </div>
+                `;
+                contenedorMensajes.style.display = 'block';
+                contenedorProductos.style.display = 'none';
+                paginacion.style.display = 'none';
+                return;
+            }
+            
+            // Calcular paginación
+            const totalPaginas = Math.ceil(productosFiltrados.length / CONFIG.PRODUCTOS_POR_PAGINA);
+            const inicio = (paginaActual - 1) * CONFIG.PRODUCTOS_POR_PAGINA;
+            const fin = inicio + CONFIG.PRODUCTOS_POR_PAGINA;
+            const productosPagina = productosFiltrados.slice(inicio, fin);
+            
+            // Generar HTML de productos
+            let html = '';
+            productosPagina.forEach(producto => {
+                const urlImagen = producto.imagen ? 
+                    `${CONFIG.IMAGENES_BASE}${producto.imagen}` : '';
+                
+                html += `
+                    <div class="tarjeta-producto ${producto.fragil ? 'fragil' : ''}">
+                        <div class="contenedor-imagen">
+                            ${urlImagen ? 
+                                `<img src="${urlImagen}" alt="${producto.nombre}" class="imagen-producto" loading="lazy" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\"sin-imagen\"><i class=\"fas fa-image\"></i> Imagen no disponible</div>';" />` :
+                                `<div class="sin-imagen"><i class="fas fa-image"></i> Sin imagen</div>`
+                            }
+                        </div>
+                        <div class="contenido-tarjeta">
+                            <div class="encabezado-tarjeta">
+                                <span class="codigo-producto">${producto.codigo}</span>
+                                ${producto.fragil ? '<span class="etiqueta-fragil">Frágil</span>' : ''}
+                            </div>
+                            <h3 class="nombre-producto">${producto.nombre}</h3>
+                            <div class="detalles-producto">
+                                <div class="detalle-item">
+                                    <i class="fas fa-layer-group"></i>
+                                    <span>Unidades: ${producto.unidades}</span>
+                                </div>
+                                <div class="detalle-item">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span>${producto.ubicacion}</span>
+                                </div>
+                                ${producto.comentario ? `
+                                    <div class="detalle-item">
+                                        <i class="fas fa-comment"></i>
+                                        <span>${producto.comentario}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="precio-producto">
+                                $${producto.precio.toLocaleString('es-ES', {minimumFractionDigits: 2})}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            contenedorMensajes.style.display = 'none';
+            contenedorProductos.innerHTML = html;
+            contenedorProductos.style.display = 'grid';
+            
+            // Renderizar paginación
+            renderizarPaginacion(totalPaginas);
+        }
+
+        function renderizarPaginacion(totalPaginas) {
+            const paginacion = document.getElementById('paginacion');
             
             if (totalPaginas <= 1) {
-                paginationEl.innerHTML = '';
+                paginacion.style.display = 'none';
                 return;
             }
             
             let html = '';
             
             // Botón anterior
-            html += `<button onclick="cambiarPagina(${paginaActual - 1})" ${paginaActual === 1 ? 'disabled' : ''}>◀ Anterior</button>`;
+            html += `
+                <button class="boton-pagina ${paginaActual === 1 ? 'deshabilitada' : ''}" 
+                        onclick="cambiarPagina(${paginaActual - 1})" ${paginaActual === 1 ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            `;
             
             // Páginas
-            for (let i = 1; i <= totalPaginas; i++) {
-                if (i === paginaActual) {
-                    html += `<button class="active">${i}</button>`;
-                } else if (i <= 3 || i > totalPaginas - 3 || Math.abs(i - paginaActual) <= 2) {
-                    html += `<button onclick="cambiarPagina(${i})">${i}</button>`;
-                } else if (i === 4 || i === totalPaginas - 3) {
-                    html += `<span>...</span>`;
-                }
+            const maxPaginasVisibles = 5;
+            let inicio = Math.max(1, paginaActual - Math.floor(maxPaginasVisibles / 2));
+            let fin = Math.min(totalPaginas, inicio + maxPaginasVisibles - 1);
+            
+            if (fin - inicio + 1 < maxPaginasVisibles) {
+                inicio = Math.max(1, fin - maxPaginasVisibles + 1);
+            }
+            
+            for (let i = inicio; i <= fin; i++) {
+                html += `
+                    <button class="boton-pagina ${i === paginaActual ? 'activa' : ''}" 
+                            onclick="cambiarPagina(${i})">
+                        ${i}
+                    </button>
+                `;
             }
             
             // Botón siguiente
-            html += `<button onclick="cambiarPagina(${paginaActual + 1})" ${paginaActual === totalPaginas ? 'disabled' : ''}>Siguiente ▶</button>`;
+            html += `
+                <button class="boton-pagina ${paginaActual === totalPaginas ? 'deshabilitada' : ''}" 
+                        onclick="cambiarPagina(${paginaActual + 1})" ${paginaActual === totalPaginas ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            `;
             
-            paginationEl.innerHTML = html;
+            paginacion.innerHTML = html;
+            paginacion.style.display = 'flex';
         }
 
         function cambiarPagina(nuevaPagina) {
-            const totalPaginas = Math.ceil(datosFiltrados.length / CONFIG.ITEMS_POR_PAGINA);
+            const totalPaginas = Math.ceil(productosFiltrados.length / CONFIG.PRODUCTOS_POR_PAGINA);
             
             if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas) {
                 paginaActual = nuevaPagina;
-                renderTable();
+                renderizarProductos();
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
         }
 
-        function formatearPrecio(valor) {
-            if (!valor) return '—';
-            const numero = parseFloat(valor.toString().replace(',', '.'));
-            return isNaN(numero) ? valor : `$${numero.toLocaleString('es-ES', {minimumFractionDigits: 2})}`;
-        }
-
         // ============================================
-        // 🏁 INICIALIZACIÓN
+        // 🌐 HACER FUNCIONES GLOBALES
         // ============================================
-
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('=== INICIALIZANDO SISTEMA ===');
-            console.log('Configuración actual:', CONFIG);
-            
-            // Verificar configuración inicial
-            if (!CONFIG.API_KEY || CONFIG.API_KEY.length < 30) {
-                mostrarError(`
-                    <strong>⚠️ API_KEY NO CONFIGURADA</strong><br><br>
-                    <strong>PASOS INMEDIATOS:</strong><br>
-                    1. Haz clic en este enlace: <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a><br>
-                    2. Crea una NUEVA "API Key"<br>
-                    3. Configura RESTRICCIONES:<br>
-                       &nbsp;&nbsp;• <strong>Restricciones de API</strong>: "Google Sheets API"<br>
-                       &nbsp;&nbsp;• <strong>Restricciones HTTP</strong>: https://richard156.github.io<br>
-                    4. Copia la clave COMPLETA (40 caracteres)<br>
-                    5. Pégala aquí: <code>CONFIG.API_KEY = 'TU_CLAVE_AQUI';</code><br><br>
-                    <button onclick="loadData()" style="background:#e74c3c; color:white; padding:10px; border:none; border-radius:5px; margin-top:10px;">
-                        🚀 Intentar de nuevo después de configurar
-                    </button>
-                `);
-            } else {
-                // Cargar datos automáticamente si hay API_KEY
-                loadData();
-            }
-        });
-
-        // Hacer funciones globales para los eventos HTML
-        window.loadData = loadData;
-        window.filterTable = filterTable;
+        window.cargarDatos = cargarDatos;
+        window.filtrarProductos = filtrarProductos;
         window.cambiarPagina = cambiarPagina;
     </script>
 </body>
