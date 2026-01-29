@@ -275,7 +275,7 @@
             box-shadow: var(--sombra);
             transition: var(--transicion);
             display: flex;
-            flex-direction: column; /* ← CLAVE: siempre columna */
+            flex-direction: column;
             height: 100%;
         }
 
@@ -286,6 +286,13 @@
 
         .tarjeta-producto.fragil {
             border-top: 4px solid var(--color-accento);
+        }
+
+        /* BLOQUE COMPLETO DEL PRODUCTO (contiene imagen y datos) */
+        .bloque-producto-completo {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
         }
 
         /* CONTENEDOR DE IMAGEN (SIEMPRE ARRIBA) */
@@ -593,7 +600,7 @@
             SPREADSHEET_ID: '1cN1QEpr4YYTFEtqx1JtF02oeAmJ7e5haA_PbsLZWxDE',
             HOJA: 'Data',
             RANGO: 'A2:M',
-            IMAGENES_BASE: 'PHOTOS_salida_20260123_1452.xls',
+            IMAGENES_BASE: 'scanpet/PHOTOS_salida_20260123_1452/',
             PRODUCTOS_POR_PAGINA: 12
         };
 
@@ -807,7 +814,7 @@
             const fin = inicio + CONFIG.PRODUCTOS_POR_PAGINA;
             const productosPagina = productosFiltrados.slice(inicio, fin);
             
-            // Generar HTML de productos con imagen ARRIBA y datos ABAJO
+            // Generar HTML de productos con imagen ARRIBA y datos ABAJO, dentro de un mismo bloque
             let html = '';
             productosPagina.forEach(producto => {
                 const urlImagen = producto.imagen ? 
@@ -815,50 +822,54 @@
                 
                 html += `
                     <div class="tarjeta-producto ${producto.fragil ? 'fragil' : ''}">
-                        <!-- PARTE SUPERIOR: IMAGEN -->
-                        <div class="contenedor-imagen">
-                            ${urlImagen ? 
-                                `<img src="${urlImagen}" alt="${producto.nombre}" class="imagen-producto" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\"sin-imagen\"><i class=\"fas fa-image\"></i><span>Imagen no disponible</span></div>` :
-                                `<div class="sin-imagen"><i class="fas fa-image"></i><span>Sin imagen</span></div>`
-                            }
-                        </div>
-                        
-                        <!-- PARTE INFERIOR: DATOS -->
-                        <div class="contenido-tarjeta">
-                            <!-- Código de barras -->
-                            <div class="codigo-producto">${producto.codigo}</div>
-                            
-                            <!-- Nombre del producto -->
-                            <h3 class="nombre-producto">${producto.nombre}</h3>
-                            
-                            <!-- Lista de detalles -->
-                            <div class="detalles-lista">
-                                <div class="detalle-item">
-                                    <i class="fas fa-boxes"></i>
-                                    <span class="detalle-texto">Unidades: <strong>${producto.unidades}</strong></span>
-                                </div>
-                                
-                                <div class="detalle-item">
-                                    <i class="fas fa-map-marker-alt"></i>
-                                    <span class="detalle-texto">${producto.ubicacion}</span>
-                                </div>
-                                
-                                ${producto.comentario ? `
-                                <div class="detalle-item">
-                                    <i class="fas fa-comment"></i>
-                                    <span class="detalle-texto">${producto.comentario}</span>
-                                </div>
-                                ` : ''}
+                        <!-- BLOQUE PRINCIPAL que contiene imagen y datos -->
+                        <div class="bloque-producto-completo">
+                            <!-- PARTE SUPERIOR: IMAGEN -->
+                            <div class="contenedor-imagen">
+                                ${urlImagen ? 
+                                    `<img src="${urlImagen}" alt="${producto.nombre}" class="imagen-producto" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\"sin-imagen\"><i class=\"fas fa-image\"></i><span>Imagen no disponible</span></div>';" />` :
+                                    `<div class="sin-imagen"><i class="fas fa-image"></i><span>Sin imagen</span></div>`
+                                }
                             </div>
                             
-                            <!-- Pie de tarjeta: Precio y etiqueta frágil -->
-                            <div class="pie-tarjeta">
-                                <div class="precio-producto">
-                                    $${producto.precio.toLocaleString('es-ES', {minimumFractionDigits: 2})}
+                            <!-- PARTE INFERIOR: DATOS -->
+                            <div class="contenido-tarjeta">
+                                <!-- Código de barras -->
+                                <div class="codigo-producto">${producto.codigo}</div>
+                                
+                                <!-- Nombre del producto -->
+                                <h3 class="nombre-producto">${producto.nombre}</h3>
+                                
+                                <!-- Lista de detalles -->
+                                <div class="detalles-lista">
+                                    <div class="detalle-item">
+                                        <i class="fas fa-boxes"></i>
+                                        <span class="detalle-texto">Unidades: <strong>${producto.unidades}</strong></span>
+                                    </div>
+                                    
+                                    <div class="detalle-item">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        <span class="detalle-texto">${producto.ubicacion}</span>
+                                    </div>
+                                    
+                                    ${producto.comentario ? `
+                                    <div class="detalle-item">
+                                        <i class="fas fa-comment"></i>
+                                        <span class="detalle-texto">${producto.comentario}</span>
+                                    </div>
+                                    ` : ''}
                                 </div>
-                                ${producto.fragil ? '<span class="etiqueta-fragil">Frágil</span>' : ''}
+                                
+                                <!-- Pie de tarjeta: Precio y etiqueta frágil -->
+                                <div class="pie-tarjeta">
+                                    <div class="precio-producto">
+                                        $${producto.precio.toLocaleString('es-ES', {minimumFractionDigits: 2})}
+                                    </div>
+                                    ${producto.fragil ? '<span class="etiqueta-fragil">Frágil</span>' : ''}
+                                </div>
                             </div>
                         </div>
+                        <!-- FIN DEL BLOQUE PRINCIPAL -->
                     </div>
                 `;
             });
