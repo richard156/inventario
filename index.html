@@ -655,42 +655,9 @@
                 }
                 
                 // Procesar productos
-             function procesarProductos(filas) {
-    return filas.map((fila, indice) => {
-        // La columna H (índice 7) contiene el nombre/valor de la imagen
-        const nombreImagen = fila[7] || '';
-        
-        // Construir la URL completa de Cloudinary
-        let urlImagen = '';
-        if (nombreImagen) {
-            // Si el valor ya es una URL completa, úsala directamente
-            if (nombreImagen.startsWith('http')) {
-                urlImagen = nombreImagen;
-            } else {
-                // Si es solo un nombre de archivo, construye la URL completa
-                urlImagen = `${CONFIG.IMAGENES_BASE}${nombreImagen}`;
-            }
-        }
-        
-        return {
-            id: indice + 1,
-            codigo: fila[0] || 'Sin código',
-            nombre: fila[1] || 'Producto sin nombre',
-            unidades: parseInt(fila[2]) || 1,
-            comentario: fila[3] || '',
-            ubicacion: fila[4] || 'Sin ubicación',
-            precio: parseFloat((fila[5] || '0').replace(',', '.')) || 0,
-            fragil: (fila[6] || '').toUpperCase() === 'SI',
-            imagen: urlImagen, // Aquí guardamos la URL completa
-            imagenNombre: nombreImagen, // Y también el nombre original por si acaso
-            fecha: fila[8] || '',
-            hora: fila[9] || '',
-            latitud: fila[10] || '',
-            longitud: fila[11] || '',
-            venta: fila[12] || ''
-        };
-    });
-}
+                todosLosProductos = procesarProductos(datos.values);
+                productosFiltrados = [...todosLosProductos];
+                
                 // Actualizar interfaz
                 actualizarResumen();
                 renderizarProductos();
@@ -705,6 +672,21 @@
 
         function procesarProductos(filas) {
             return filas.map((fila, indice) => {
+                // La columna H (índice 7) contiene el nombre/valor de la imagen
+                const nombreImagen = fila[7] || '';
+                
+                // Construir la URL completa de Cloudinary
+                let urlImagen = '';
+                if (nombreImagen) {
+                    // Si el valor ya es una URL completa, úsala directamente
+                    if (nombreImagen.startsWith('http')) {
+                        urlImagen = nombreImagen;
+                    } else {
+                        // Si es solo un nombre de archivo, construye la URL completa
+                        urlImagen = `${CONFIG.IMAGENES_BASE}${nombreImagen}`;
+                    }
+                }
+                
                 return {
                     id: indice + 1,
                     codigo: fila[0] || 'Sin código',
@@ -714,7 +696,8 @@
                     ubicacion: fila[4] || 'Sin ubicación',
                     precio: parseFloat((fila[5] || '0').replace(',', '.')) || 0,
                     fragil: (fila[6] || '').toUpperCase() === 'SI',
-                    imagen: fila[7] || '',
+                    imagen: urlImagen, // Aquí guardamos la URL completa
+                    imagenNombre: nombreImagen, // Y también el nombre original por si acaso
                     fecha: fila[8] || '',
                     hora: fila[9] || '',
                     latitud: fila[10] || '',
@@ -850,21 +833,16 @@
             // Generar HTML de productos con imagen ARRIBA y datos ABAJO, dentro de un mismo bloque
             let html = '';
             productosPagina.forEach(producto => {
-                const urlImagen = producto.imagen ? 
-                    `${CONFIG.IMAGENES_BASE}${producto.imagen}` : '';
-                
                 html += `
                     <div class="tarjeta-producto ${producto.fragil ? 'fragil' : ''}">
                         <!-- BLOQUE PRINCIPAL que contiene imagen y datos -->
                         <div class="bloque-producto-completo">
                             <!-- PARTE SUPERIOR: IMAGEN -->
                             <div class="contenedor-imagen">
-// Por esta versión mejorada:
-${producto.imagen ? 
-    `<img src="${producto.imagen}" alt="${producto.nombre}" class="imagen-producto" loading="lazy" 
-         onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\"sin-imagen\"><i class=\"fas fa-image\"></i><span>Imagen no disponible</span></div>';" />` :
-    `<div class="sin-imagen"><i class="fas fa-image"></i><span>Sin imagen</span></div>`
-}
+                                ${producto.imagen ? 
+                                    `<img src="${producto.imagen}" alt="${producto.nombre}" class="imagen-producto" loading="lazy" 
+                                         onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\"sin-imagen\"><i class=\"fas fa-image\"></i><span>Imagen no disponible</span></div>';" />` :
+                                    `<div class="sin-imagen"><i class="fas fa-image"></i><span>Sin imagen</span></div>`
                                 }
                             </div>
                             
