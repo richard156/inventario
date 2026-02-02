@@ -655,9 +655,42 @@
                 }
                 
                 // Procesar productos
-                todosLosProductos = procesarProductos(datos.values);
-                productosFiltrados = [...todosLosProductos];
-                
+             function procesarProductos(filas) {
+    return filas.map((fila, indice) => {
+        // La columna H (índice 7) contiene el nombre/valor de la imagen
+        const nombreImagen = fila[7] || '';
+        
+        // Construir la URL completa de Cloudinary
+        let urlImagen = '';
+        if (nombreImagen) {
+            // Si el valor ya es una URL completa, úsala directamente
+            if (nombreImagen.startsWith('http')) {
+                urlImagen = nombreImagen;
+            } else {
+                // Si es solo un nombre de archivo, construye la URL completa
+                urlImagen = `${CONFIG.IMAGENES_BASE}${nombreImagen}`;
+            }
+        }
+        
+        return {
+            id: indice + 1,
+            codigo: fila[0] || 'Sin código',
+            nombre: fila[1] || 'Producto sin nombre',
+            unidades: parseInt(fila[2]) || 1,
+            comentario: fila[3] || '',
+            ubicacion: fila[4] || 'Sin ubicación',
+            precio: parseFloat((fila[5] || '0').replace(',', '.')) || 0,
+            fragil: (fila[6] || '').toUpperCase() === 'SI',
+            imagen: urlImagen, // Aquí guardamos la URL completa
+            imagenNombre: nombreImagen, // Y también el nombre original por si acaso
+            fecha: fila[8] || '',
+            hora: fila[9] || '',
+            latitud: fila[10] || '',
+            longitud: fila[11] || '',
+            venta: fila[12] || ''
+        };
+    });
+}
                 // Actualizar interfaz
                 actualizarResumen();
                 renderizarProductos();
